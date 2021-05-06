@@ -1,0 +1,350 @@
+---
+title: "papaja"
+subtitle: "producing APA journal articles"
+author: "ReproducibiliTea Leiden workshop"
+date: "5/3/2021"
+output: 
+    ioslides_presentation:
+        smaller: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(papaja)
+```
+
+## Why leave the Word comfort zone...?
+
+### good for science
+
+-   transparency
+
+-   error prevention (see eg. ["statcheck"](https://link.springer.com/article/10.3758/s13428-015-0664-2))
+
+### good for you
+
+-   free + open source
+
+-   flexible: easily change from APA to eg. Chicaco Style
+
+-   prevent errors (eg. rounding errors, copying the wrong result, correct mistakes, report "what if..." results)
+
+-   annotate and motivate your analytic + reporting choices despite space requirements in the final document
+
+## `papaja`: what it does
+
+-   Package built and maintained by [Frederik Aust](https://twitter.com/FrederikAust) & Marius Barth, see manual [here](http://frederikaust.com/papaja_man/).
+
+-   builds on existing tools for reproducible documents (RMarkdown, pandoc, knitr, ...)
+
+-   simplifies their use for APA-style reports in various formats
+
+          .wordx          .pdf          .html
+
+-   additional functions that simplify reporting
+
+    -   results of common statistical tests
+    -   APA-style figures
+    -   APA-style tables
+
+-   functions to [cite R packages](http://frederikaust.com/papaja_man/writing.html#citing-r-and-its-packages)
+
+-   entry level drug ᕕ( ᐛ )ᕗ
+
+## `papaja`: limitations
+
+-   collaborative editing less convenient, but possible (eg. with GitHub or Codeocean)
+
+-   reporting less common analysis results, and typesetting the final document *exactly* how you like it ~~requires~~ builds LaTeX skills
+
+    -   papaja´s convenient reporting functions for results and tables are somewhat limited
+    -   for PDF documents, you can manually build everything you need using LaTeX code, eg. \`\pagebreak\` or building tables to your taste
+    -   for Word documents, options are more limited and need to be resolved manually after rendering your final draft `¯\_(ツ)_/¯`
+
+-   **but**: you can always exit by rendering to .doc
+
+## Set-up
+
+### Needed:
+
+-   R + RMarkdown + pandoc
+-   install `papaja` package and restart RStudio
+-   LaTeX distribution for creating PDFs
+
+### Recommended:
+
+-   latest version RStudio
+-   reference manager (eg. Zotero)
+
+## Writing in markdown
+
+-   separate **text** from **format** from **analysis results**
+
+-   **knit** these together to build a document
+
+-   added flexibility while preserving transparency & reproducibility
+
+## Error in ...
+
+At every stage, things may not work as you think they should work.
+
+Don't panic.
+
+[Read error logs](http://frederikaust.com/papaja_man/tips-and-tricks.html#troubleshooting), documentations, ask google, ask friends at OSCL, twitter or [StackOverflow](https://stackoverflow.com/questions/tagged/papaja)
+
+## Before we begin...
+
+-   global vs. local [chunk options:](https://yihui.org/knitr/options/)
+
+-   top to bottom evaluation, caching
+
+-   working directory should contain all necessary files:
+
+    -   .bib file(s)
+    -   additional figures used (eg. University logo)
+    -   data
+
+## Writing in RMarkdown: Markup
+
+        # Header 1 
+        ## Header 2
+
+        *italics*
+        **bold**
+
+        $ mathematical stuff in LaTeX syntax $
+
+        <!-- comment in markdown -->
+        
+        `r # comment in R code`
+
+        This needs a footnote[^ f1]
+        [^ f1]  This is my footnote 1.
+
+## Writing in RMarkdown: Code-chunks
+
+### Code chunk:
+
+\`\`\`{r `HelloWorld`, echo = TRUE}
+
+HW \<- paste("Hello world")
+
+HW
+
+\`\`\`
+
+### In-line R code:
+
+\` r HW \`
+
+### Chunk-labels
+
+-   here: `HelloWorld`
+-   unique: one label per chunk
+-   no underscores: `Hello_World` will throw errors
+-   can be cross-referenced!
+
+## Reporting results: the basics
+
+-   Store your analysis output as an object, so you can access it's values and print your specific result
+
+-   inspect structure of this object using `str()`
+
+-   print only the value you need
+
+```{r carsRegression, echo = T, eval=FALSE}
+lm_out = lm(formula = dist ~ speed, data = cars)
+(summary(lm_out)) # probably used this
+
+str(lm_out) # inspect structure of output object
+
+lm_out$coefficients # show only coefficients
+
+# estimate of effect of speed
+b_speed <- lm_out$coefficients[2] # show only effect of speed
+str(b_speed) # still not just the estimate, let's see...
+b_speed_numeric <- as.numeric(b_speed) # too many decimals
+round(b_speed_numeric, digits = 2) # yay!
+```
+
+## [Reporting results:](http://frederikaust.com/papaja_man/reporting.html)
+
+-   `papaja::printnum()`
+
+    -   automatically rounds numbers according to APA guidelines
+
+    -   function arguments to adjust default reporting style
+
+    -   for in-line R code, papaja automatically applies this function to the provided variable!
+
+-   `papaja::printp()`
+
+    -   for correctly typesetting p-values
+
+    ```{r carsPrint, echo = T, eval = FALSE}
+    lm_out = lm(formula = dist ~ speed, data = cars)    # store output
+    str( summary(lm_out) )                              # inspect structure
+    b_speed <- summary(lm_out)$coefficients[2, 1]       # 3.932409
+
+    papaja::printnum(b_speed)                           # "3.93"
+
+    p_speed <- summary(lm_out)$coefficients[2, 4]       # [1] 1.489836e-12
+    papaja::printp(p_speed)                             # "< .001"
+    ```
+
+## APA in-text report
+
+-   `papaja::apa_print(lm_out)`
+
+    -   prepare common output objects for convenient reporting in APA style
+
+    ```{r carsReport, echo = T, eval = FALSE}
+    print_lm <- papaja::apa_print(lm_out)       # store output
+
+    str(print_lm)                               # inspect structure
+
+    print_lm$estimate[[2]] 
+            # [1] "$b = 3.93$, 95\\% CI $[3.10, 4.77]$"
+            
+    print_lm$statistic[[2]] 
+            # [1] "$t(48) = 9.46$, $p < .001$"
+            
+    print_lm$full_result[[2]] 
+            # "$b = 3.93$, 95\\% CI $[3.10, 4.77]$, $t(48) = 9.46$, $p < .001$"
+    ```
+
+## APA figures: ggplot2 theme_apa
+
+```{r carsFigureGgplot, echo = T, eval = FALSE}
+library(ggplot2)
+
+#  fitted linear regression model
+
+theme_set(theme_apa(box=TRUE))
+
+ggplot( data = cars 
+        , aes( speed, dist)) +
+  geom_point() +
+  geom_smooth( method='lm') +
+  labs(
+    x = "Car speed"
+    , y = "Stopping distance"
+  ) 
+```
+
+## APA tables
+
+```{r carsTable, echo = TRUE, eval = FALSE}
+
+papaja::apa_table( 
+    print_lm$table
+    , caption = "A full regression table."
+    )
+
+# can't demonstrate in slides :)
+```
+
+... see [instructions here.](http://frederikaust.com/papaja_man/reporting.html#tables)
+
+## Figures & Tables
+
+-   According to APA, figures & tables are **placed at end of document** by default by papaja
+
+    -   for PDF documents, you can overwrite this default behavior in YAML header by setting "floatsintext: yes"
+
+-   any plot generated by a chunk is **automatically added**
+
+    -   papaja automatically creates a files sub-folder and stores each plot as .pdf and .png
+    -   by default, resolution at 300DPI. Change using [knitr plot chunk options](https://yihui.org/knitr/options/#plots) (`dev` and `dpi`).
+
+-   for consistent APA style, set **global style options**.
+
+    -   ggplot2: use papaja's theme template `theme_apa()`
+    -   base R: specify that knitr should apply global chunk settings (by default, it does not) using `knitr::opts_knit$set(global.par = TRUE)`
+
+-   include external images using `knitr::include_graphics("filename.png")`
+
+## Captions
+
+### Figure captions
+
+-   use [text references](http://frederikaust.com/papaja_man/tips-and-tricks.html#text-references) for captions
+-   convenient: paste pre-defined sentences to Figures across multiple similar plots! - figure captions *can* be added using the chunk options, but causes inconveniences further down the road
+-   long figure captions may *overflow* (= not fit your page) when rendering to pdf. See help [here.](http://frederikaust.com/papaja_man/reporting.html#figure-captions){.uri}
+
+### Table captions
+
+-   use `papaja::apa_table()`
+-   there, table captions are defined within the function, not in-text
+
+## [Cross-referencing](http://frederikaust.com/papaja_man/writing.html#cross-referencing) figures and tables:
+
+-   refer to 2nd table as *Table 2* throughout text, and automagically call it *Table 3* after inserting another table before!
+
+-   each table / figure should be produced in separate chunk with unique chunk-label which must not contain `_`
+
+-   see [bookdown documentation](https://bookdown.org/yihui/bookdown/cross-references.html) for `pdf_document2()` and `word_document2()` format
+
+-   cross-reference using
+
+          \@ref(fig:chunk-label)
+          \@ref(tab:chunk-label)
+
+-   preceded by space, eg.
+
+         Figure\ \@ref(fig:chunk-label)
+
+## [Citation references](http://frederikaust.com/papaja_man/writing.html#citations)
+
+-   citations are automatically re-ordered alphabetically within subgroup
+-   separate subgroups by prefixes such as "see also, ..."
+
+![](Screen%20Shot%202021-05-05%20at%2015.11.58.png){width="700"}
+
+## Building your bibliography
+
+-   Many ways to build a .bib file:
+
+    -   Rstudio Visual editor: RStudio automatically generates a file called \`references.bib\` and specifies this file at bottom of YAML header (caution!).
+
+    -   Export a Zotero library under "File -\> Export Library... -\>" and specify name and directory. Export only a collection by right-clicking the collection -\> Export Library...
+
+        -   Tip: Specify how Zotero should generate Citekeys under Go to Zotero -\> Preferences -\> Better BibTeX -\> Citation Keys, eg. as [authEtAl][year]
+
+    -   Create a plain text file in your directory and manually paste citations from journal cites or Google Scholare in BibLaTeX format. Go to Zotero -\> Preferences -\> Better BibTeX tab.
+
+    ![](Screen%20Shot%202021-05-06%20at%2012.23.05.png){width="678"}
+
+-   .bib file can contain more references then you actually use in your document, and will only print the relevant ones to your Reference list.
+
+-   always check your .bib file for correctness!
+
+## Rendering / [YAML header](http://frederikaust.com/papaja_man/r-markdown-components.html#yaml-front-matter)
+
+-   some info *needs* to be included, eg. author affiliation
+-   output: `papaja::apa6_pdf`or `papaja::apa6_word`
+-   classoption "`man"` is APA6 manuscript style, "`doc`" is typical Word doc style
+-   wordcount: currently only printed to R console, not included in document
+-   papaja default: `replace_ampersand` for in-text citations for apa citation style, but not when you define different citation style
+
+![](Screen%20Shot%202021-05-05%20at%2014.42.06.png){width="450"}
+
+## More resources
+
+-   visual editor and menu options in RStudio
+
+-   RMarkdown [Cheatsheet](https://www.rstudio.com/wp-content/uploads/2016/03/rmarkdown-cheatsheet-2.0.pdf)
+
+-   [R Markdown Cookbook](https://bookdown.org/yihi/rmarkdown-cookbook/)
+
+-   [RStudio shortcuts!](https://www.r-bloggers.com/2020/05/rstudio-shortcuts-and-tips/)
+
+## Be nice to those who may reproduce:
+
+-   don't include setwd() or install.packages()
+
+-   use [`here()` package](https://here.r-lib.org) for navigating your directory with relative filepaths
+
+-   use devtools::session.info() to report your setup (R version, installed packages etc.)
+
+-   go really fancy: preserve your whole computational environment in a container / virtual machine, eg. using [docker](https://colinfay.me/docker-r-reproducibility/)
